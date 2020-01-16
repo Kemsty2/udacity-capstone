@@ -1,0 +1,20 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema",
+    "title": "createTimer",
+    "type": "object",
+    "properties": {
+        "title": {
+            "type": "string"
+        },
+        "project": {
+            "type": "string"
+        },
+        "elapsed": {
+            "type": "number"
+        },
+        "runningSince": {
+            "type": "number"
+        }
+    },    
+    "additionalProperties": false
+}

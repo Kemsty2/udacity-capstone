@@ -1,0 +1,327 @@
+service:
+  name: serverless-timer-app
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
+
+custom:
+  documentation:
+    api:
+      info:
+        version: v1.0.0
+        title: Timer Rest Api
+        description: Serverless application for Timer App
+    models:
+      - name: CreateTimerRequest
+        contentType: application/json
+        schema: ${file(models/create-timer-request.json)}
+      - name: UpdateTimerRequest
+        contentType: application/json
+        schema: ${file(models/update-timer-request.json)}
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+
+# Add the serverless-webpack plugin
+plugins:
+  - serverless-webpack
+  - serverless-aws-documentation
+  - serverless-plugin-warmup
+  - serverless-iam-roles-per-function
+  - serverless-reqvalidator-plugin
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  tracing:
+    apiGateway: true
+    lambda: true
+  apiGateway:
+    minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
+  environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    IMAGES_S3_BUCKET: imagesattachment-timer-${self:provider.stage}
+    TIMERS_TABLE: TimersTable-kemsty-${self:provider.stage}
+    TIMERS_INDEX_TABLE: TimersTableIndex-kemsty-${self:provider.stage}
+
+functions:
+
+  Auth:
+    handler: src/lambda/index.auth0Authorizer
+
+  GetTimers:
+    handler: src/lambda/index.getTimers
+    warmup:
+      enabled: true
+    events:
+      - http:
+          method: get
+          path: timers
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource: "*"
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TIMERS_TABLE}
+
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TIMERS_TABLE}/index/${self:provider.environment.TIMERS_INDEX_TABLE}
+
+      - Effect: Allow
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource: "*"
+
+      - Effect: "Allow"
+        Action:
+          - "lambda:InvokeFunction"
+        Resource:
+          - Fn::Join:
+              - ":"
+              - - arn:aws:lambda
+                - Ref: AWS::Region
+                - Ref: AWS::AccountId
+                - function:${self:service.name}-${self:provider.stage}-*
+
+  CreateTimer:
+    handler: src/lambda/index.createTimer
+    warmup:
+      enabled: true
+    events:
+      - http:
+          method: post
+          path: timers
+          cors: true
+          authorizer: Auth
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new timer item
+            description: Create a new timer item
+            requestModels:
+              "application/json": CreateTimerRequest
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource: "*"
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TIMERS_TABLE}
+
+      - Effect: Allow
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource: "*"
+
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TIMERS_TABLE}
+
+      - Effect: "Allow"
+        Action:
+          - "lambda:InvokeFunction"
+        Resource:
+          - Fn::Join:
+              - ":"
+              - - arn:aws:lambda
+                - Ref: AWS::Region
+                - Ref: AWS::AccountId
+                - function:${self:service.name}-${self:provider.stage}-*
+
+  UpdateTimer:
+    handler: src/lambda/index.updateTimer
+    warmup:
+      enabled: true
+    events:
+      - http:
+          method: patch
+          path: timers/{timerId}
+          cors: true
+          authorizer: Auth
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Update a timer of the current user
+            description: Update a timer of the current user
+            requestModels:
+              "application/json": UpdateTimerRequest
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource: "*"
+
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TIMERS_TABLE}
+
+      - Effect: Allow
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource: "*"
+
+      - Effect: "Allow"
+        Action:
+          - "lambda:InvokeFunction"
+        Resource:
+          - Fn::Join:
+              - ":"
+              - - arn:aws:lambda
+                - Ref: AWS::Region
+                - Ref: AWS::AccountId
+                - function:${self:service.name}-${self:provider.stage}-*
+
+  DeleteTimer:
+    handler: src/lambda/index.deleteTimer
+    events:
+      - http:
+          method: delete
+          path: timers/{timerId}
+          authorizer: Auth
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource: "*"
+
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:DeleteItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TIMERS_TABLE}
+      - Effect: Allow
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource: "*"
+  
+  GenerateUploadUrl:
+    handler: src/lambda/index.generateUploadUrl
+    events:
+      - http:
+          method: post
+          path: timers/{timerId}/attachment
+          authorizer: Auth
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource: "*"
+
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+          - s3:GetObject
+        Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
+
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TIMERS_TABLE}
+
+      - Effect: Allow
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource: "*"
+
+resources:
+  Resources:
+    GatewayResponse:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*''"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET, OPTIONS, POST'"        
+        ResponseType: DEFAULT_4XX
+        RestApiId: 
+          Ref: ApiGatewayRestApi
+
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: "request-body-validator"
+        RestApiId: 
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+
+    TimersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: 'S'
+          - AttributeName: elapsed
+            AttributeType: 'N'
+          - AttributeName: timerId
+            AttributeType: 'S'
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: timerId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.TIMERS_TABLE}
+        LocalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.TIMERS_INDEX_TABLE}
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: elapsed
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.IMAGES_S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              MaxAge: 3000
+
+    BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref AttachmentsBucket
+        PolicyDocument:
+          Id: MyPolicy
+          Version: "2012-10-17"
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: 'arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*'
+            
+

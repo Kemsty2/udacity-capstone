@@ -1,0 +1,18 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema",
+    "title": "createTimer",
+    "type": "object",
+    "properties": {
+        "title": {
+            "type": "string"
+        },
+        "project": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "title",
+        "project"
+    ],
+    "additionalProperties": false
+}
