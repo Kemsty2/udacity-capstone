@@ -35,6 +35,7 @@ export interface TimerContextState {
   handleDeleteTimer?: (timerId: string) => void;
   isLoadingTimer: boolean
   isLoadingBtn: boolean
+  timerId?: string
 }
 
 export class TimerProvider extends Component<
@@ -95,7 +96,8 @@ export class TimerProvider extends Component<
       const authToken = this.context.authToken      
 
       this.setState({
-        isLoadingBtn: true
+        isLoadingBtn: true,
+        timerId
       })
 
       await updateTimer(authToken, timerId, updatedTimer);
@@ -110,7 +112,8 @@ export class TimerProvider extends Component<
             return timer;
           }
         }),
-        isLoadingBtn: false        
+        isLoadingBtn: false,    
+        timerId    
       });
     } catch (error) {
       alert("Failed start timer");
@@ -129,7 +132,8 @@ export class TimerProvider extends Component<
       const authToken = this.context.authToken
       
       this.setState({
-        isLoadingBtn: true
+        isLoadingBtn: true,
+        timerId
       })
 
       await updateTimer(authToken, timerId, updatedTimer);
@@ -146,7 +150,8 @@ export class TimerProvider extends Component<
             return timer;
           }
         }),
-        isLoadingBtn: false        
+        isLoadingBtn: false,    
+        timerId
       });
     } catch (error) {
       alert("stop failed");

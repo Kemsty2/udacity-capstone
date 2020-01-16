@@ -146,7 +146,7 @@ class Timer extends Component<Props, State> {
           color="red"
           className="bottom attached fluid"
           onClick={this.handleStopTimer}
-          loading={this.context.isLoadingBtn}
+          loading={this.context.isLoadingBtn && this.props.timerId === this.context.timerId}
         >
           <Button.Content visible>Stop Timer</Button.Content>
           <Button.Content hidden>
@@ -162,7 +162,7 @@ class Timer extends Component<Props, State> {
           color="black"
           className="bottom attached fluid"
           onClick={this.handleStartTimer}
-          loading={this.context.isLoadingBtn}
+          loading={this.context.isLoadingBtn && this.props.timerId === this.context.timerId}
         >
           <Button.Content visible>Start Timer</Button.Content>
           <Button.Content hidden>

@@ -84,7 +84,6 @@ http://localhost:3000/
 The application is able to manage timer. A timer item contains the following field : 
 * `timerId` (string) - a unique id for a timer
 * `userId` (string) - a id which represent the timer owner
-* `createdAt` (string) - date and time when a timer was created
 * `title` (string) - title of a Timer item (e.g. "Change a light bulb")
 * `project` (string) - project name of a Timer item (e.g. "Change a light bulb")
 * `elapsed` (number) - amount of time in millisecond the timer have been start an stop
