@@ -1,7 +1,7 @@
 <p align="center"><img height="100px" src="./Images/logo2.svg"></p>
 
 <p align="center">
-<a href="https://travis-ci.org/mckenziearts/shopper"><img src="https://travis-ci.org/mckenziearts/shopper.png?branch=master"></a>
+<a href="https://travis-ci.org/Kemsty2/udacity-capstone"><img src="https://travis-ci.org/Kemsty2/udacity-capstone.svg?branch=master"></a>
 </p>
 
 ## Introduction
